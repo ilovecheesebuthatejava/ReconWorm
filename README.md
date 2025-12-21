@@ -1,5 +1,5 @@
 # ReconWorm
-Made by Tom <3 
+Made by Tom <3 ,
 ReconWorm is a lightweight reconnaissance automation script designed to streamline the early stages of web application and asset discovery. It helps security researchers quickly organise and run common recon tasks while keeping results structured and easy to review.
 
 ## Features
