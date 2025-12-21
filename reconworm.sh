@@ -22,7 +22,7 @@ display_ascii_art() {
 |_| \_\___|\___\___/|_| |_|\_/\_/ \___/|_|  |_| |_| |_| |_(_)_____|
 --------------------------------------------------------------------
       It's a little itty bitty worm that does recon for you :)
-               Made with <3 by coffeeaddict
+               Made with <3 by coffeeaddict (tom)
               ------------------------------
 EOF
 }
