@@ -28,5 +28,5 @@ chmod +x install.sh
 ```
 -m is the mode you wish to define for example ```-m passive ``` for passive mode this will run subdomain enumeration and JS/history scan then there is also ```-m active``` this runs HTTP probing and port scanning along with the prevoius tools used for passive and ```-m full``` runs all tools within the script 
 
-```./reconworm.sh```
+
 
