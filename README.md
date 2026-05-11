@@ -26,7 +26,7 @@ chmod +x install.sh
 ```
 ./reconworm.sh -d example.com -o output -m full
 ```
--m is the mode you wish to define for example ```-m passive ```
+-m is the mode you wish to define for example ```-m passive ``` for passive mode then there is also ```-m active``` and ```-m full``` runs all tools within the script 
 
 ```./reconworm.sh```
 
