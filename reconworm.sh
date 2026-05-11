@@ -1,7 +1,74 @@
 #!/bin/bash
 
-# Function to display ASCII art
-display_ascii_art() {
+# =========================
+# ReconWorm CLI Tool
+# =========================
+
+VERSION="1.0"
+
+DOMAIN=""
+OUTPUT_DIR="output"
+MODE="full"
+
+# =========================
+# Help Menu
+# =========================
+usage() {
+cat << EOF
+ReconWorm v$VERSION - Automated Recon CLI Tool
+
+USAGE:
+  reconworm -d example.com -o output_dir -m mode
+
+OPTIONS:
+  -d  Target domain (required)
+  -o  Output directory (default: output)
+  -m  Mode: passive | active | full (default: full)
+  -h  Show help
+
+MODES:
+  passive -> subdomain enumeration only
+  active  -> enum + http probing + ports
+  full    -> full recon + vuln scanning
+
+EXAMPLE:
+  reconworm -d target.com -o results -m full
+EOF
+exit 1
+}
+
+# =========================
+# Parse CLI Args
+# =========================
+while getopts "d:o:m:h" opt; do
+  case $opt in
+    d) DOMAIN=$OPTARG ;;
+    o) OUTPUT_DIR=$OPTARG ;;
+    m) MODE=$OPTARG ;;
+    h) usage ;;
+    *) usage ;;
+  esac
+done
+
+if [[ -z "$DOMAIN" ]]; then
+    echo "[!] Domain is required"
+    usage
+fi
+
+# =========================
+# Setup Paths
+# =========================
+BASE_DIR="$OUTPUT_DIR/$DOMAIN"
+mkdir -p "$BASE_DIR"
+
+echo "[*] Output directory: $BASE_DIR"
+echo "[*] Mode: $MODE"
+echo "[*] Target: $DOMAIN"
+
+# =========================
+# Banner
+# =========================
+banner() {
     cat << "EOF"
                                                    /~~\
      ____                                         /'o  |
@@ -27,188 +94,146 @@ display_ascii_art() {
 EOF
 }
 
-# Function to display a message with delay
-display_message_with_delay() {
-    message="$1"
-    delay="$2"
-    echo "$message"
-    sleep "$delay"
+
+# =========================
+# Subdomain Enumeration
+# =========================
+sub_enum() {
+    echo "[*] Running subdomain enumeration..."
+
+    subfinder -d "$DOMAIN" -o "$BASE_DIR/subfinder.txt"
+    assetfinder --subs-only "$DOMAIN" >> "$BASE_DIR/assetfinder.txt"
+
+    cat "$BASE_DIR/subfinder.txt" "$BASE_DIR/assetfinder.txt" | sort -u > "$BASE_DIR/subdomains.txt"
+
+    echo "[+] Subdomain enumeration done"
 }
 
-# Function to prompt for recon output directory
-prompt_for_recon_output() {
-    read -p 'Recon output directory to create: ' DIR
-    mkdir -p "$DIR" && echo "Done!!!" || { echo "Error: Unable to create directory"; exit 1; }
-}
-sleep 3
+# =========================
+# HTTP Probing
+# =========================
+http_probe() {
+    echo "[*] Running httpx probes..."
 
-# Main script execution
-clear
-sleep 1
+    cat "$BASE_DIR/subdomains.txt" | httpx -silent -o "$BASE_DIR/live_hosts.txt"
 
-display_ascii_art
+    cat "$BASE_DIR/subdomains.txt" | httpx -title -status-code -tech-detect -follow-redirects -silent \
+    -o "$BASE_DIR/http_details.txt"
 
-display_message_with_delay "Running....." 1
-display_message_with_delay "Still running......" 2
-display_message_with_delay "Tip: Please make sure you have all tools from the install.sh file" 1
-
-prompt_for_recon_output
-
-clear
-sleep 2
-DOMAIN=$1
-OUTPUT=$1
-# Subdomain enumeration script with advanced features
-
-# Function to print the ASCII art banner
-cat << "EOF"
-
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::      $$$$$$\            $$\             $$$$$$$$\                                        ::
-::     $$  __$$\           $$ |            $$  _____|                                       ::
-::     $$ /  \__|$$\   $$\ $$$$$$$\        $$ |      $$$$$$$\  $$\   $$\ $$$$$$\$$$$\       ::
-::     \$$$$$$\  $$ |  $$ |$$  __$$\       $$$$$\    $$  __$$\ $$ |  $$ |$$  _$$  _$$\      ::
-::      \____$$\ $$ |  $$ |$$ |  $$ |      $$  __|   $$ |  $$ |$$ |  $$ |$$ / $$ / $$ |     ::
-::     $$\   $$ |$$ |  $$ |$$ |  $$ |      $$ |      $$ |  $$ |$$ |  $$ |$$ | $$ | $$ |     ::
-::     \$$$$$$  |\$$$$$$  |$$$$$$$  |      $$$$$$$$\ $$ |  $$ |\$$$$$$  |$$ | $$ | $$ |     ::
-::      \______/  \______/ \_______/       \________|\__|  \__| \______/ \__| \__| \__|     ::
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-
-EOF
-
-
-read -p 'HOST DOMAIN: ' DOMAIN
-read -p 'OUTPUT FILE: ' OUTPUT
-wget https://raw.githubusercontent.com/blechschmidt/massdns/master/lists/resolvers.txt -O $DIR/resolvers.txt
-
-# Function to perform subdomain enumeration
-
-    echo "Running subdomain enumeration..."
-    subfinder -d $DOMAIN -o $DIR/$OUTPUT
-    assetfinder --subs-only $DOMAIN | tee -a $DIR/$OUTPUT
-    echo "Subdomain enumeration completed. Running httpx..."
-
-# Function to perform httpx scanning
-    {
-cat "$DIR/$OUTPUT" | httpx -silent -o "$DIR/httpx.txt"
-cat "$DIR/$OUTPUT" | httpx -title -status-code -tech-detect -follow-redirects -silent -o "$DIR/status.txt"
-    echo "httpx completed. Now testing for subdomain takeover..."
-}
-       {
-
-    subjack -w $DIR/$OUTPUT -v | tee -a takeovers.txt
-
-    echo "Subdomain enumeration finished."
+    echo "[+] HTTP probing done"
 }
 
-echo "other code running"
-# Bruteforce permutations (e.g., api-dev, vault-pro
-cat $DIR/$OUTPUT | massdns -r $DIR/resolvers.txt -t A -o J -w $DIR/massdns-out.json  
+# =========================
+# Port Scanning
+# =========================
+port_scan() {
+    echo "[*] Running naabu port scan..."
 
-# Merge and deduplicate results from multiple tools  
-amass enum -passive -d $DOMAIN -o $DIR/amass.txt   
-  
+    cat "$BASE_DIR/subdomains.txt" | naabu -silent -o "$BASE_DIR/ports.txt"
 
-# Resolve live hosts with HTTPX  
-cat $DIR/amass.txt | httpx -silent -ports 80,443,8080,8443 -status-code -title -tech-detect -o $DIR/live_hosts.txt  
-# Function to check for subdomain takeover
-
-sleep 3 
-echo "done"
-
-
-
-clear
-
-
-
-sleep 1
-# Function to display ASCII art
-display_ascii_art() {
-    cat << "EOF"
-////////////////////////////////////////////////////////
-// ____            _                                  //
-//|  _ \ ___  _ __| |_    ___ _ __  _   _ _ __ ___    //
-//| |_) / _ \| '__| __|  / _ \ '_ \| | | | '_ ` _ \   //
-//|  __/ (_) | |  | |_  |  __/ | | | |_| | | | | | |  //
-//|_|   \___/|_|   \__|  \___|_| |_|\__,_|_| |_| |_|  //
-////////////////////////////////////////////////////////
-EOF
+    echo "[+] Port scan complete"
 }
 
-# Function to perform naabu mass port scan
-run_naabu_scan() {
-    echo "Depending on your target, this may take a while."
-    echo "It's worth it, so just sit back and get a coffee :)"
+# =========================
+# Vulnerability Scanning
+# =========================
+vuln_scan() {
+    echo "[*] Running nuclei scan..."
 
-    sleep 3
-    echo "Running naabu mass port scan...."
-    cat $DIR/$OUTPUT | naabu | tee -a ports.txt || { echo "Error: Naabu scan failed"; exit 1; }
-    echo "Scan completed!"
+    cat "$BASE_DIR/live_hosts.txt" | nuclei -silent -o "$BASE_DIR/nuclei_results.txt"
+
+    echo "[+] Vulnerability scan complete"
 }
 
-# Function to filter FTP and SSH ports
-filter_ports() {
-    echo "Filtering FTP and SSH ports..."
-    sleep 2
-    grep -w 21 ports.txt > ftp.txt
-    grep -w 22 ports.txt > ssh.txt
-    cat ports.txt | grep -v -e "443" -e "80" > otherports.txt
+# =========================
+# Subdomain Takeover Check
+# =========================
+takeover_check() {
+    echo "[*] Checking for subdomain takeover..."
 
-    echo "Done!"
-   cat ftp.txt
-   cat ssh.txt
-read -p 'look it over, press enter when done'
+    subjack -w "$BASE_DIR/subdomains.txt" -v 2>> "$BASE_DIR/takeovers.txt"
+
+    echo "[+] Takeover scan complete"
 }
 
+# =========================
+# JS / Recon Expansion
+# =========================
+js_recon() {
+    echo "[*] Running JS + endpoint discovery..."
 
-# Function to provide tips
-display_tips() {
-    echo "TIP: Try testing for anonymous login on FTP servers"
-sleep 3
-echo "running nuclei testing on ports/subs...."
-sleep 1
-cat otherports.txt | nuclei | tee -a nucleiportresults.txt
+    waybackurls "$DOMAIN" | sort -u > "$BASE_DIR/wayback.txt"
 
-echo "running crawl of file and js scrape"
-echo "endpoint shit..."
-sleep 2
-cd $DIR
-# Extract URLs from Wayback Machine + Common Crawl
-waybackurls $DOMAIN | gau | grep "\.js$" | anew urls.txt
+    cat "$BASE_DIR/wayback.txt" | grep "\.js$" > "$BASE_DIR/js_urls.txt"
 
-# Hunt for secrets in GitHub
-gitgraber -k keywords.txt  $DOMAIN -d
-
-
-
-cat urls.txt | grep ".js" | httpx -sr -s js | tee -a js.txt
-cd
-cat workscript/$DIR/js.txt | nuclei -t  nuclei-templates/http/misconfiguration | tee -a workscript/$DIR/Nmisconfig.txt
-cat workscript/$DIR/js.txt | nuclei -t nuclei-templates/http/exposures | tee -a  workscript/$DIR/Nexposures.txt
-cd
-cd workscript 
-cd $DIR
-mv $OUTPUT -f /home/coffeeaddict/workscript/urlscan/
-cd
-cd /home/coffeeaddict/workscript/urlscan
-./url.sh
-
-read -p 'done!!!'
+    echo "[+] JS recon complete"
 }
 
-# Main script execution
-clear
-display_ascii_art
-sleep 2
+# =========================
+# Pipeline Controller
+# =========================
+run_passive() {
+    sub_enum
+    js_recon
+}
 
-run_naabu_scan
+run_active() {
+    sub_enum
+    http_probe
+    port_scan
+    js_recon
+}
 
-echo "Grepping FTP and SSH ports..."
-filter_ports
+run_full() {
+    sub_enum
+    http_probe
+    port_scan
+    vuln_scan
+    takeover_check
+    js_recon
+}
 
-display_tips
+# =========================
+# Main Execution
+# =========================
+main() {
+    banner
 
-clear
+    case "$MODE" in
+        passive)
+            run_passive
+            ;;
+        active)
+            run_active
+            ;;
+        full)
+            run_full
+            ;;
+        *)
+            echo "[!] Invalid mode: $MODE"
+            usage
+            ;;
+    esac
+
+    echo "[+] Recon complete. Output: $BASE_DIR"
+}
+
+main
+generate_summary() {
+    echo "[*] Generating summary report..."
+
+    SUMMARY_FILE="$BASE_DIR/summary.txt"
+
+    echo "====== Recon Summary ======" > "$SUMMARY_FILE"
+    echo "Target: $DOMAIN" >> "$SUMMARY_FILE"
+    echo "Mode: $MODE" >> "$SUMMARY_FILE"
+    echo "Date: $(date)" >> "$SUMMARY_FILE"
+    echo "" >> "$SUMMARY_FILE"
+
+    echo "Subdomains: $(wc -l < "$BASE_DIR/subdomains.txt" 2>/dev/null)" >> "$SUMMARY_FILE"
+    echo "Live hosts: $(wc -l < "$BASE_DIR/live_hosts.txt" 2>/dev/null)" >> "$SUMMARY_FILE"
+    echo "Ports found: $(wc -l < "$BASE_DIR/ports.txt" 2>/dev/null)" >> "$SUMMARY_FILE"
+    echo "Vulnerabilities: $(wc -l < "$BASE_DIR/nuclei_results.txt" 2>/dev/null)" >> "$SUMMARY_FILE"
+
+    echo "[+] Summary saved to $SUMMARY_FILE"
+}
