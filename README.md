@@ -23,6 +23,9 @@ chmod +x install.sh
 ./install.sh
 ```
 ## Usage
+```
+./reconworm.sh -d example.com -o output -m full
+```
 You will be prompted to specify a directory name.
 All reconnaissance results and scan outputs will be stored in this directory for easy access and review.
 
