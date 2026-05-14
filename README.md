@@ -1,6 +1,10 @@
-# ReconWorm
-Made by Tom <3 ,
-ReconWorm is a lightweight reconnaissance automation script designed to streamline the early stages of web application and asset discovery. It helps security researchers quickly organise and run common recon tasks while keeping results structured and easy to review.
+## Overview
+
+ReconWorm is a CLI-based reconnaissance tool designed to automate the process of 
+asset discovery, service enumeration, and vulnerability scanning.
+
+It integrates multiple industry-standard tools into a structured pipeline 
+to produce organised and actionable reconnaissance data.
 
 ## Features
 - Automates common reconnaissance workflows  
