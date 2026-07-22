@@ -4,9 +4,9 @@ ReconWorm is  CLI recon tool with a bulit-in pipeline framework for developers t
 This should only be used in bug bounty or authorised pentesting and the active mode sends out a lot of requests so read RoE of your program your running this against.
 
 ## Features
-- Automates common reconnaissance workflows  
-- Organises scan output into a user-defined directory  
-- Designed for learning, research, and ethical security testing  
+- Automates common reconnaissance (subdomain enum/port enum/ANS enum/)  
+- Organises scan output into a neat directorys and txt files
+- Designed for automated recon for bug hunters
 
 ---
 
