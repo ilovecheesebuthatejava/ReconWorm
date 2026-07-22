@@ -1,17 +1,12 @@
 ## Overview
 
-ReconWorm is a CLI-based reconnaissance tool designed to automate the process of 
-asset discovery, service enumeration, and vulnerability scanning.
-
-It integrates multiple industry-standard tools into a structured pipeline 
-to produce organised and actionable reconnaissance data.
+ReconWorm is  CLI recon tool with a bulit-in pipeline framework for developers to add or costomize the tool in anyway they wish.
+This should only be used in bug bounty or authorised pentesting and the active mode sends out a lot of requests so read RoE of your program your running this against.
 
 ## Features
 - Automates common reconnaissance workflows  
 - Organises scan output into a user-defined directory  
 - Designed for learning, research, and ethical security testing  
-
-> ⚠️ ReconWorm is intended for **educational purposes and authorised security testing only**. Always ensure you have permission before scanning any systems.
 
 ---
 
